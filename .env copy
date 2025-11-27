@@ -1,0 +1,21 @@
+# TODO: Set these field to the containers before deploy or update in read config to the .env file
+SERVER_PORT=:8080
+SWAGGER_HOST=localhost:8080
+
+# Database Configuration
+DB_USER=postgres
+DB_PASSWORD=password
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=shorten-url-db
+DB_SSLMODE=disable
+DB_TYPE=postgres
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# AWS Configuration
+AWS_REGION=us-east-1
+S3_BUCKET_NAME=factorial-calculator-service
