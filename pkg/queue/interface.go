@@ -11,3 +11,5 @@ type Consumer interface {
 	Consume(ctx context.Context, queueName string, payload []byte) error
 	Close() error
 }
+
+type MessageHandler func(ctx context.Context, queueName string, payload []byte) error
