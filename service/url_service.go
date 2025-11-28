@@ -20,19 +20,19 @@ type URLService interface {
 type urlService struct {
 	queueName string
 	urlRepo   repo.URLRepository
-	queue     queue.Producer
+	producer  queue.Producer
 	encoder   URLEncoder
 }
 
 func NewURLService(
 	config config.Config,
 	urlRepo repo.URLRepository,
-	queue queue.Producer,
+	producer queue.Producer,
 ) URLService {
 	return &urlService{
 		queueName: config.QUEUE_NAME,
 		urlRepo:   urlRepo,
-		queue:     queue,
+		producer:  producer,
 		encoder:   NewBase62Encoder(config),
 	}
 }
@@ -43,7 +43,7 @@ func (s *urlService) SubmitURL(ctx context.Context, url string) error {
 		return fmt.Errorf("invalid URL: %s", url)
 	}
 	msg := dto.URLMessage{URL: url}
-	return s.queue.Publish(ctx, s.queueName, msg.Bytes())
+	return s.producer.Publish(ctx, s.queueName, msg.Bytes())
 }
 
 func (s *urlService) HandleShortenURL(ctx context.Context, queueName string, payload []byte) error {

@@ -1,103 +1,86 @@
 package main
 
+import (
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"shorten/pkg/config"
+	"shorten/pkg/db"
+	"shorten/pkg/queue/redis_stream"
+	"shorten/repo"
+	"shorten/service"
+
+	"github.com/redis/go-redis/v9"
+)
+
 func main() {
-	panic("not implemented")
-	// cfg := config.LoadConfig()
+	cfg := config.LoadConfig()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("Configuration validation failed: %v", err)
+	}
 
-	// // Validate configuration
-	// if err := cfg.Validate(); err != nil {
-	// 	log.Fatalf("Configuration validation failed: %v", err)
-	// }
+	// Initialize database
+	database, err := db.NewGormDB(cfg.DSN())
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	log.Println("Connected to database")
 
-	// // Initialize database
-	// database, err := db.NewGormDB(cfg.DSN())
-	// if err != nil {
-	// 	log.Fatalf("Failed to connect to database: %v", err)
-	// }
-	// log.Println("Connected to database")
+	// Initialize Redis
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     cfg.RedisAddr(),
+		Password: cfg.REDIS_PASSWORD,
+	})
 
-	// // Initialize Redis
-	// redisClient := redis.NewClient(&redis.Options{
-	// 	Addr:     cfg.RedisAddr(),
-	// 	Password: cfg.REDIS_PASSWORD,
-	// })
+	// Test Redis connection
+	ctx := context.Background()
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		log.Printf("Warning: Redis connection failed: %v", err)
+	} else {
+		log.Println("Connected to Redis successfully")
+	}
+	defer redisClient.Close()
 
-	// // Test Redis connection
-	// ctx := context.Background()
-	// if err := redisClient.Ping(ctx).Err(); err != nil {
-	// 	log.Printf("Warning: Redis connection failed: %v", err)
-	// } else {
-	// 	log.Println("Connected to Redis successfully")
-	// }
-	// defer redisClient.Close()
+	// Initialize dependencies
+	urlRepo := repo.NewURLRepository(database)
+	urlService := service.NewURLService(*cfg, urlRepo, nil)
 
-	// redisService := service.NewRedisService(redisClient, 24*time.Hour, int64(cfg.REDIS_THRESHOLD))
-	// // Initialize services
-	// s3Service := service.NewS3Service(ctx, cfg)
-	// factorialService := service.NewFactorialService(
-	// 	repository.NewFactorialRepository(database),
-	// 	repository.NewCurrentCalculatedRepository(database),
-	// 	repository.NewMaxRequestRepository(database),
-	// 	s3Service,
-	// )
+	// Create consumer with handler
+	consumer, err := redis_stream.NewRedisStreamConsumer(
+		redisClient,
+		urlService.HandleShortenURL,
+		redis_stream.WithConsumerGroup("shorten-url-group"),
+		redis_stream.WithConsumerName("shorten-url-worker"),
+		redis_stream.WithEnsureGroup(),
+	)
+	if err != nil {
+		log.Fatalf("Failed to create consumer: %v", err)
+	}
+	defer consumer.Close()
 
-	// // Initialize repositories
-	// factorialRepo := repository.NewFactorialRepository(database)
-	// maxRequestRepo := repository.NewMaxRequestRepository(database)
-	// currentCalculatedRepo := repository.NewCurrentCalculatedRepository(database)
+	// Start consumer in goroutine
+	consumerCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// // Initialize RabbitMQ consumer
-	// mqConsumer, err := consumer.NewRabbitMQConsumer(cfg.RabbitMQURL())
-	// if err != nil {
-	// 	log.Fatalf("Failed to create RabbitMQ consumer: %v", err)
-	// }
-	// defer mqConsumer.Close()
+	go func() {
+		log.Printf("Starting consumer for queue: %s", cfg.QUEUE_NAME)
+		if err := consumer.Consume(consumerCtx, cfg.QUEUE_NAME, nil); err != nil {
+			log.Printf("Consume err: %v", err)
+		}
+	}()
 
-	// // Create batch handler
-	// factorialMessageHandler := consumer.NewFactorialMessageHandler(
-	// 	factorialService,
-	// 	redisService,
-	// 	s3Service,
-	// 	factorialRepo,
-	// 	maxRequestRepo,
-	// 	currentCalculatedRepo,
-	// )
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	// Wait for interrupt signal
+	<-quit
+	log.Println("Received shutdown signal, starting graceful shutdown...")
 
-	// batchSize := cfg.WORKER_BATCH_SIZE
-	// maxBatches := cfg.WORKER_MAX_BATCHES
-	// if maxBatches <= 0 {
-	// 	maxBatches = 16 // Default
-	// }
-	// if batchSize <= 0 {
-	// 	batchSize = 100 // Default
-	// }
+	// Wait for graceful shutdown or timeout
+	<-time.After(5 * time.Second)
 
-	// // Setup signal handling
-	// quit := make(chan os.Signal, 1)
-	// signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	// // Worker pool with WaitGroup
-	// workerCount := maxBatches
-	// if workerCount <= 0 {
-	// 	workerCount = 1
-	// }
-
-	// log.Printf("Starting %d batch consumers with batch size %d", workerCount, batchSize)
-
-	// // Start consumer in a goroutine
-	// err = mqConsumer.Consume(ctx, cfg.FACTORIAL_CAL_SERVICES_QUEUE_NAME, factorialMessageHandler)
-	// if err != nil {
-	// 	log.Fatalf("Consumer error: %v", err)
-	// }
-
-	// log.Println("Worker started, waiting for messages...")
-
-	// // Wait for interrupt signal
-	// <-quit
-	// log.Println("Received shutdown signal, starting graceful shutdown...")
-
-	// // Wait for graceful shutdown or timeout
-	// <-time.After(5 * time.Second)
-
-	// log.Println("Worker stopped")
+	log.Println("Worker stopped")
 }
