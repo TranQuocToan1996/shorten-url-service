@@ -11,8 +11,6 @@ import (
 
 const defaultValueField = "payload"
 
-
-
 type ProducerOption func(*redisStreamProducer)
 
 func WithMaxLen(maxLen int64, approximate bool) ProducerOption {

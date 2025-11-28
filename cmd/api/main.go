@@ -1,125 +1,118 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"shorten/handler"
+	"shorten/pkg/config"
+	"shorten/pkg/db"
+	"shorten/pkg/db/migrations"
+	"shorten/pkg/queue/redis_stream"
+	"shorten/repo"
+	"shorten/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/swaggo/swag/example/basic/docs"
 )
 
 func main() {
-	panic("not implemented")
-	// cfg := config.LoadConfig()
+	cfg := config.LoadConfig()
 
-	// // Validate configuration
-	// if err := cfg.Validate(); err != nil {
-	// 	log.Fatalf("Configuration validation failed: %v", err)
-	// }
+	// Validate configuration
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("Configuration validation failed: %v", err)
+	}
 
-	// dsn := cfg.DSN()
-	// // Run migrations
-	// if err := migrations.RunMigrations(dsn); err != nil {
-	// 	log.Printf("Migration failed: %v", err)
-	// }
+	dsn := cfg.DSN()
+	// Run migrations
+	if err := migrations.RunMigrations(dsn); err != nil {
+		log.Printf("Migration failed: %v", err)
+	}
 
-	// // Initialize database
-	// database, err := db.NewGormDB(dsn)
-	// if err != nil {
-	// 	log.Fatalf("Failed to connect to database: %v", err)
-	// }
+	// Initialize database
+	database, err := db.NewGormDB(dsn)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
 
-	// // Initialize Redis
-	// redisClient := redis.NewClient(&redis.Options{
-	// 	Addr:     cfg.RedisAddr(),
-	// 	Password: cfg.REDIS_PASSWORD,
-	// })
-	// defer redisClient.Close()
+	// Initialize Redis
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     cfg.RedisAddr(),
+		Password: cfg.REDIS_PASSWORD,
+	})
+	defer redisClient.Close()
 
-	// // Test Redis connection
-	// ctx := context.Background()
-	// if err := redisClient.Ping(ctx).Err(); err != nil {
-	// 	log.Printf("Warning: Redis connection failed: %v", err)
-	// } else {
-	// 	log.Println("Connected to Redis successfully")
-	// }
+	// Test Redis connection
+	ctx := context.Background()
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		log.Printf("Warning: Redis connection failed: %v", err)
+	} else {
+		log.Println("Connected to Redis successfully")
+	}
 
-	// // Initialize RabbitMQ producer
-	// mqProducer, err := producer.NewRabbitMQProducer(cfg.RabbitMQURL())
-	// if err != nil {
-	// 	log.Fatalf("Failed to create RabbitMQ producer: %v", err)
-	// }
-	// defer mqProducer.Close()
+	// Setup routes
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.Default()
 
-	// redisService := service.NewRedisService(redisClient, 24*time.Hour, int64(cfg.REDIS_THRESHOLD))
-	// s3Service := service.NewS3Service(ctx, cfg)
+	urlRepo := repo.NewURLRepository(database)
+	urlService := service.NewURLService(*cfg, urlRepo, redis_stream.NewRedisStreamProducer(redisClient))
+	urlHandler := handler.NewShortenURLHandler(urlService)
 
-	// // Initialize repository
-	// factorialRepo := repository.NewFactorialRepository(database)
-	// // Initialize services
-	// factorialService := service.NewFactorialService(
-	// 	repository.NewFactorialRepository(database),
-	// 	repository.NewCurrentCalculatedRepository(database),
-	// 	repository.NewMaxRequestRepository(database),
-	// 	s3Service,
-	// )
-	// // Initialize handler
-	// factorialHandler := handler.NewFactorialHandler(
-	// 	factorialService,
-	// 	redisService,
-	// 	s3Service,
-	// 	factorialRepo,
-	// 	mqProducer,
-	// 	cfg.FACTORIAL_CAL_SERVICES_QUEUE_NAME,
-	// )
+	// Swagger
+	if cfg.SWAGGER_HOST != "" {
+		docs.SwaggerInfo.Host = cfg.SWAGGER_HOST
+	}
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// // Setup routes
-	// gin.SetMode(gin.ReleaseMode)
-	// r := gin.Default()
+	// Health check
+	r.GET("/health", healthCheck)
 
-	// // Swagger
-	// if cfg.SWAGGER_HOST != "" {
-	// 	docs.SwaggerInfo.Host = cfg.SWAGGER_HOST
-	// }
-	// r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// API routes
+	v1 := r.Group("/api/v1")
+	{
+		v1.POST("/encode", urlHandler.SubmitShortURL)
+		// TODO: Implement
+		// v1.POST("/decode", urlHandler.SubmitShortURL)
+		// v1.POST("/decode/:code", urlHandler.SubmitShortURL)
+	}
 
-	// // Health check
-	// r.GET("/health", healthCheck)
+	srv := &http.Server{
+		Addr:    cfg.SERVER_PORT,
+		Handler: r,
+	}
 
-	// // API routes
-	// v1 := r.Group("/api/v1")
-	// {
-	// 	v1.POST("/factorial", factorialHandler.SubmitCalculation)
-	// 	v1.GET("/factorial/:number", factorialHandler.GetResult)
-	// 	v1.GET("/factorial/metadata/:number", factorialHandler.GetMetadata)
-	// }
+	// Run server in goroutine
+	go func() {
+		log.Printf("API server listening on %s", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server error: %v", err)
+		}
+	}()
 
-	// srv := &http.Server{
-	// 	Addr:    cfg.SERVER_PORT,
-	// 	Handler: r,
-	// }
+	// Wait for interrupt signal for graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 
-	// // Run server in goroutine
-	// go func() {
-	// 	log.Printf("API server listening on %s", srv.Addr)
-	// 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-	// 		log.Fatalf("Server error: %v", err)
-	// 	}
-	// }()
+	log.Println("Shutting down API server...")
 
-	// // Wait for interrupt signal for graceful shutdown
-	// quit := make(chan os.Signal, 1)
-	// signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	// <-quit
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	// log.Println("Shutting down API server...")
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
 
-	// shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// defer cancel()
-
-	// if err := srv.Shutdown(shutdownCtx); err != nil {
-	// 	log.Printf("Server forced to shutdown: %v", err)
-	// }
-
-	// log.Println("API server stopped")
+	log.Println("API server stopped")
 }
 
 // healthCheck godoc

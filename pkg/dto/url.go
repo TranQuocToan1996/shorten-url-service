@@ -1,5 +1,5 @@
 package dto
 
-type CalculateRequest struct {
+type SubmitShortenURLRequest struct {
 	URL string `json:"number" binding:"required"`
 }

@@ -24,7 +24,7 @@ type urlService struct {
 	encoder   URLEncoder
 }
 
-func NewFactorialService(
+func NewURLService(
 	config config.Config,
 	urlRepo repo.URLRepository,
 	queue queue.Producer,
@@ -37,6 +37,7 @@ func NewFactorialService(
 	}
 }
 
+// TODO: Save submit status -> fail/ok
 func (s *urlService) SubmitURL(ctx context.Context, url string) error {
 	if !url_utils.IsValidURL(url) {
 		return fmt.Errorf("invalid URL: %s", url)
@@ -54,6 +55,7 @@ func (s *urlService) HandleShortenURL(ctx context.Context, queueName string, pay
 	if !url_utils.IsValidURL(msg.URL) {
 		return fmt.Errorf("invalid URL: %s", msg.URL)
 	}
+	// TODO: Notify client ok and fail case
 	code, err := s.encoder.Encode(msg.URL)
 	if err != nil {
 		return err
@@ -62,12 +64,11 @@ func (s *urlService) HandleShortenURL(ctx context.Context, queueName string, pay
 		CleanURL: msg.URL,
 		Code:     code,
 		Algo:     model.AlgoBase62,
-		Status:   model.StatusSubmit,
+		Status:   model.StatusEncoded,
 	}
 	err = s.urlRepo.Save(shortenURL)
 	if err != nil {
 		return err
 	}
-	// TODO: Notify client
 	return nil
 }

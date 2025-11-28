@@ -1,45 +1,36 @@
 package handler
 
 import (
-	"fmt"
-	"log"
 	"net/http"
+
+	"shorten/pkg/dto"
+	"shorten/service"
 
 	"github.com/gin-gonic/gin"
 )
 
-type ShortenURLHandler struct{}
-
-func NewFactorialHandler() *ShortenURLHandler {
-	return &ShortenURLHandler{}
+type ShortenURLHandler struct {
+	urlService service.URLService
 }
 
-func (h *ShortenURLHandler) RequestSubmitShortURL(c *gin.Context) {
-	var req dto.FactorialMessage
+func NewShortenURLHandler(
+	urlService service.URLService,
+) *ShortenURLHandler {
+	return &ShortenURLHandler{
+		urlService: urlService,
+	}
+}
 
+func (h *ShortenURLHandler) SubmitShortURL(c *gin.Context) {
+	var req dto.SubmitShortenURLRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		sendErrorResponse(c, http.StatusBadRequest, "fail", err.Error())
 		return
 	}
-
-	// Validate number
-	_, err := h.factorialService.ValidateNumber(fmt.Sprintf("%d", req.Number))
+	err := h.urlService.SubmitURL(c.Request.Context(), req.URL)
 	if err != nil {
-		sendErrorResponse(c, http.StatusBadRequest, "fail", err.Error())
+		sendErrorResponse(c, http.StatusInternalServerError, "fail", err.Error())
 		return
 	}
-
-	msg := dto.FactorialMessage{Number: req.Number}
-	err = h.producer.Publish(c.Request.Context(), h.queueName, msg.Bytes())
-	if err != nil {
-		log.Printf("Error publishing message: %v", err)
-		sendErrorResponse(c, http.StatusInternalServerError, "fail", "Failed to submit calculation")
-		return
-	}
-
-	// Return calculating status
-	sendAPIResponse(c, http.StatusOK, "ok", "submitted", dto.CalculateResponseData{
-		Number:  req.Number,
-		Message: "submitted",
-	})
+	sendAPIResponse(c, http.StatusOK, "ok", "submitted", nil)
 }
