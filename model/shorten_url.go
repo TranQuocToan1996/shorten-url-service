@@ -5,9 +5,13 @@ import (
 )
 
 const (
-	StatusCalculating = "submitted"
-	StatusUploading   = "encoded"
-	StatusDone        = "failed"
+	StatusSubmit  = "submitted"
+	StatusEncoded = "encoded"
+	StatusFailed  = "failed"
+)
+
+const (
+	AlgoBase62 = "base62"
 )
 
 type ShortenURL struct {
