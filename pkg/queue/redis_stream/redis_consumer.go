@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// TODO: Retry logic redis stream
 type redisStreamConsumer struct {
 	client       *redis.Client
 	handler      queue.MessageHandler
@@ -46,7 +48,7 @@ func NewRedisStreamConsumer(client *redis.Client, handler queue.MessageHandler, 
 		startID:      ">",
 		autoAck:      true,
 		valueField:   defaultValueField,
-		pendingIdle:  30 * time.Second,
+		pendingIdle:  3 * time.Second,
 		reclaimBatch: 20,
 	}
 
@@ -100,7 +102,9 @@ func (c *redisStreamConsumer) Consume(ctx context.Context, queueName string, _ [
 		for _, str := range res {
 			for _, msg := range str.Messages {
 				if err := c.processMessage(ctx, queueName, msg); err != nil {
-					return err
+					log.Printf("Failed to process message %s: %v", msg.ID, err)
+					// Don't return - continue with next message
+					continue
 				}
 			}
 		}
@@ -159,7 +163,9 @@ func (c *redisStreamConsumer) reclaimPending(ctx context.Context, queueName stri
 
 	for _, msg := range claimed {
 		if err := c.processMessage(ctx, queueName, msg); err != nil {
-			return err
+			log.Printf("Failed to process reclaimed message %s: %v", msg.ID, err)
+			// Don't return - continue with next message
+			continue
 		}
 	}
 
