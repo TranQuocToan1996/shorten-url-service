@@ -1,5 +1,5 @@
-.PHONY: test
-test:
+.PHONY: tests
+tests:
 	go test -v ./... -race -timeout 300s -cover
 
 .PHONY: swagger

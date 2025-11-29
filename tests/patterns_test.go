@@ -69,7 +69,9 @@ func TestSemaphore_BoundedConcurrency(t *testing.T) {
 	for i := 0; i < n; i++ {
 		s.Submit(func() error {
 			r := atomic.AddInt32(&running, 1)
-			for j := 0; j < 5; j++ { time.Sleep(1 * time.Millisecond) }
+			for j := 0; j < 5; j++ {
+				time.Sleep(1 * time.Millisecond)
+			}
 			for {
 				rx := atomic.LoadInt32(&maxRunning)
 				if r > rx {
