@@ -22,3 +22,21 @@ func IsValidURL(rawURL string) bool {
 	}
 	return true
 }
+
+func IsBase62(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
+
+	for _, ch := range s {
+		switch {
+		case ch >= '0' && ch <= '9':
+		case ch >= 'A' && ch <= 'Z':
+		case ch >= 'a' && ch <= 'z':
+		default:
+			return false
+		}
+	}
+
+	return true
+}

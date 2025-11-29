@@ -81,7 +81,7 @@ func main() {
 	{
 		v1.POST("/encode", urlHandler.SubmitEncode)
 		v1.GET("/decode", urlHandler.GetDecode)
-		v1.POST("/decode/:code", urlHandler.SubmitShortURL)
+		v1.GET("/:code", urlHandler.RedirectLongURL)
 	}
 
 	srv := &http.Server{

@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"shorten/pkg/dto"
+	"shorten/pkg/utils/url_utils"
 	"shorten/service"
 
 	"github.com/gin-gonic/gin"
@@ -50,4 +52,19 @@ func (h *ShortenURLHandler) GetDecode(c *gin.Context) {
 	response := dto.GetDecodeURLResponse{}
 	copier.Copy(urlObj, &response)
 	sendAPIResponse(c, http.StatusOK, "ok", "success", response)
+}
+
+func (h *ShortenURLHandler) RedirectLongURL(c *gin.Context) {
+	const maxCodeLength = 10
+	code := c.Param("code")
+	if !url_utils.IsBase62(code) || len(code) > maxCodeLength {
+		sendErrorResponse(c, http.StatusBadRequest, "fail", fmt.Sprintf("code [%v] is not valid", code))
+		return
+	}
+	urlObj, err := h.urlService.GetDecode(c.Request.Context(), code)
+	if err != nil {
+		sendErrorResponse(c, http.StatusInternalServerError, "fail", err.Error())
+		return
+	}
+	c.Redirect(http.StatusMovedPermanently, urlObj.CleanURL)
 }

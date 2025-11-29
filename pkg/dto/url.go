@@ -7,7 +7,7 @@ type SubmitShortenURLRequest struct {
 }
 
 type GetDecodeURLRequest struct {
-	ShortenURL string `json:"number" binding:"required,url"`
+	ShortenURL string `json:"shorten_url" binding:"required,url"`
 }
 
 type GetDecodeURLResponse struct {
