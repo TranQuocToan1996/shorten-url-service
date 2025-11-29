@@ -67,7 +67,7 @@ func main() {
 	urlRepo := repo.NewURLRepository(database)
 	cache := redis_cache.NewRedisCache(redisClient)
 	urlService := service.NewURLService(*cfg, urlRepo, redis_stream.NewRedisStreamProducer(redisClient), cache)
-	urlHandler := handler.NewShortenURLHandler(urlService)
+	urlHandler := handler.NewShortenURLHandler(urlService, *cfg)
 
 	// Swagger
 	if cfg.HOST != "" {

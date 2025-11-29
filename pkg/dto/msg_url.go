@@ -2,7 +2,6 @@ package dto
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 type URLMessage struct {
@@ -10,7 +9,8 @@ type URLMessage struct {
 }
 
 func (m *URLMessage) Bytes() []byte {
-	return fmt.Appendf(nil, "{\"url\": %s}", m.URL)
+	data, _ := json.Marshal(m)
+	return data
 }
 
 func (m *URLMessage) Unmarshal(data []byte) error {

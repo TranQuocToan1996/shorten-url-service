@@ -13,6 +13,7 @@ type urlRepo struct {
 type URLRepository interface {
 	Save(shortenURL *model.ShortenURL) error
 	GetByCode(code string) (*model.ShortenURL, error)
+	GetByLongURL(longURL string) (*model.ShortenURL, error)
 }
 
 func NewURLRepository(db *gorm.DB) URLRepository {
@@ -27,7 +28,16 @@ func (r *urlRepo) Save(shortenURL *model.ShortenURL) error {
 
 func (r *urlRepo) GetByCode(code string) (*model.ShortenURL, error) {
 	var res model.ShortenURL
-	err := r.db.Where("status = ?", code).First(&res).Error
+	err := r.db.Where("code = ?", code).First(&res).Error
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (r *urlRepo) GetByLongURL(longURL string) (*model.ShortenURL, error) {
+	var res model.ShortenURL
+	err := r.db.Where("long_url = ?", longURL).First(&res).Error
 	if err != nil {
 		return nil, err
 	}

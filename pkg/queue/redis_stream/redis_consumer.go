@@ -48,7 +48,7 @@ func NewRedisStreamConsumer(client *redis.Client, handler queue.MessageHandler, 
 		startID:      ">",
 		autoAck:      true,
 		valueField:   defaultValueField,
-		pendingIdle:  3 * time.Second,
+		pendingIdle:  10 * time.Second,
 		reclaimBatch: 20,
 	}
 

@@ -65,16 +65,21 @@ func (s *urlService) HandleShortenURL(ctx context.Context, queueName string, pay
 	if !url_utils.IsValidURL(msg.URL) {
 		return fmt.Errorf("invalid URL: %s", msg.URL)
 	}
+	existing, err := s.urlRepo.GetByLongURL(msg.URL)
+	if err == nil && existing != nil {
+		// URL already processed, skip
+		return nil
+	}
 	// TODO: Notify client ok and fail case
 	code, err := s.encoder.Encode(msg.URL)
 	if err != nil {
 		return err
 	}
 	shortenURL := &model.ShortenURL{
-		CleanURL: msg.URL,
-		Code:     code,
-		Algo:     model.AlgoBase62,
-		Status:   model.StatusEncoded,
+		LongURL: msg.URL,
+		Code:    code,
+		Algo:    model.AlgoBase62,
+		Status:  model.StatusEncoded,
 	}
 	err = s.urlRepo.Save(shortenURL)
 	if err != nil {
@@ -85,7 +90,7 @@ func (s *urlService) HandleShortenURL(ctx context.Context, queueName string, pay
 }
 
 func (s *urlService) GetDecode(ctx context.Context, shortenURL string) (*model.ShortenURL, error) {
-	code := strings.TrimPrefix(shortenURL, s.config.DB_HOST)
+	code := strings.TrimPrefix(shortenURL, s.config.REDIRECT_HOST)
 
 	// Try to get from cache first
 	cacheKey := s.UrlCacheKey(code)

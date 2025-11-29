@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for API and Worker
+# Multi-stage Dockerfile for Migration
 
 # Build stage
 FROM golang:1.25-alpine AS builder
@@ -20,5 +20,4 @@ FROM alpine:3.18 AS migrate
 WORKDIR /app
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /app/migrate /app/migrate
-COPY --from=builder /app/migrations /app/migrations
 ENTRYPOINT ["/app/migrate"]

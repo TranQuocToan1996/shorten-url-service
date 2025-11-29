@@ -15,8 +15,9 @@ func LoadConfig() *Config {
 		DB_PORT:          getEnvOrDefault("DB_PORT", "5432"),
 		DB_NAME:          getEnvOrDefault("DB_NAME", "shorten-url-services"),
 		DB_SSLMODE:       getEnvOrDefault("DB_SSLMODE", "disable"),
-		QUEUE_NAME:       getEnvOrDefault("FACTORIAL_CAL_SERVICES_QUEUE_NAME", "default-queue"),
+		QUEUE_NAME:       getEnvOrDefault("QUEUE_NAME", "default-queue"),
 		HOST:             getEnvOrDefault("HOST", "localhost:8080"),
+		REDIRECT_HOST:    getEnvOrDefault("REDIRECT_HOST", "localhost:8080"),
 		REDIS_HOST:       getEnvOrDefault("REDIS_HOST", "localhost"),
 		REDIS_PORT:       getEnvOrDefault("REDIS_PORT", "6379"),
 		REDIS_PASSWORD:   getEnvOrDefault("REDIS_PASSWORD", ""),
@@ -35,6 +36,7 @@ type Config struct {
 	DB_SSLMODE       string `mapstructure:"DB_SSLMODE"`
 	QUEUE_NAME       string `mapstructure:"QUEUE_NAME"`
 	HOST             string `mapstructure:"HOST"`
+	REDIRECT_HOST    string `mapstructure:"REDIRECT_HOST"`
 	REDIS_HOST       string `mapstructure:"REDIS_HOST"`
 	REDIS_PORT       string `mapstructure:"REDIS_PORT"`
 	REDIS_PASSWORD   string `mapstructure:"REDIS_PASSWORD"`

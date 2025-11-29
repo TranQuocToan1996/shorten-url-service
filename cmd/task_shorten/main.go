@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -15,6 +16,7 @@ import (
 	"shorten/repo"
 	"shorten/service"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -51,12 +53,15 @@ func main() {
 	cache := redis_cache.NewRedisCache(redisClient)
 	urlService := service.NewURLService(*cfg, urlRepo, nil, cache)
 
+	consumerName := fmt.Sprintf("shorten-url-worker-%s", uuid.NewString())
+	log.Printf("Consumer shorten_URL start: %v", consumerName)
+
 	// Create consumer with handler
 	consumer, err := redis_stream.NewRedisStreamConsumer(
 		redisClient,
 		urlService.HandleShortenURL,
 		redis_stream.WithConsumerGroup("shorten-url-group"),
-		redis_stream.WithConsumerName("shorten-url-worker"),
+		redis_stream.WithConsumerName(consumerName),
 		redis_stream.WithEnsureGroup(),
 	)
 	if err != nil {

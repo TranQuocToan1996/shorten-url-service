@@ -5,6 +5,7 @@ go 1.25.3
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang-migrate/migrate/v4 v4.19.0
+	github.com/google/uuid v1.6.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/redis/go-redis/v9 v9.17.1
 	github.com/swaggo/files v1.0.1

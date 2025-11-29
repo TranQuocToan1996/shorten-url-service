@@ -1,0 +1,26 @@
+# Multi-stage Dockerfile for Task Shorten Worker
+
+# Build stage
+FROM golang:1.25-alpine AS builder
+WORKDIR /app
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+
+# Build task_shorten binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o task_shorten ./cmd/task_shorten
+
+
+# Task Shorten Image
+FROM alpine:3.18 AS task_shorten
+WORKDIR /app
+RUN apk add --no-cache ca-certificates
+COPY --from=builder /app/task_shorten /app/task_shorten
+ENTRYPOINT ["/app/task_shorten"]
