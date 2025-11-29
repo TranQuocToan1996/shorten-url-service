@@ -10,6 +10,7 @@ import (
 
 	"shorten/model"
 	"shorten/pkg/config"
+	"shorten/pkg/dto"
 	"shorten/service"
 )
 
@@ -63,6 +64,13 @@ func (c *mockCache) Set(_ context.Context, key string, value []byte, expiration 
 }
 func (c *mockCache) Delete(_ context.Context, _ string) error { return nil }
 
+type mockEncoder struct {
+	toCode string
+	err    error
+}
+
+func (e *mockEncoder) Encode(_ string) (string, error) { return e.toCode, e.err }
+
 func makeConfig() config.Config {
 	return config.Config{
 		QUEUE_NAME:    "queue",
@@ -86,7 +94,7 @@ func TestSubmitURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &mockProducer{err: tt.prodErr}
-			us := service.NewURLService(makeConfig(), &mockRepo{}, p, &mockCache{})
+			us := service.NewURLService(makeConfig(), &mockRepo{}, p, &mockCache{}, service.NewBase62Encoder(makeConfig()))
 			err := us.SubmitURL(context.Background(), tt.url)
 			if (err != nil) != (tt.errOut != nil) {
 				t.Fatalf("err mismatch, got %v, want %v", err, tt.errOut)
@@ -121,7 +129,7 @@ func TestGetDecode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			us := service.NewURLService(cfg, tt.repo, &mockProducer{}, tt.cache)
+			us := service.NewURLService(cfg, tt.repo, &mockProducer{}, tt.cache, service.NewBase62Encoder(makeConfig()))
 			res, err := us.GetDecode(context.Background(), tt.inputURL)
 			if tt.errExpected && err == nil {
 				t.Fatalf("expected error, got none")
@@ -131,6 +139,36 @@ func TestGetDecode(t *testing.T) {
 			}
 			if !tt.errExpected && res == nil {
 				t.Fatalf("expected result, got nil")
+			}
+		})
+	}
+}
+
+func TestHandleShortenURL(t *testing.T) {
+	goodMsg := (&dto.URLMessage{URL: "https://a.com"}).Bytes()
+	badMsg, _ := json.Marshal(map[string]any{"bad": "val"})
+
+	tests := []struct {
+		name    string
+		payload []byte
+		repo    *mockRepo
+		encoder *mockEncoder
+		errOut  bool
+	}{
+		{"valid_new", goodMsg, &mockRepo{}, &mockEncoder{toCode: "abc"}, false},
+		{"invalid_url", (&dto.URLMessage{URL: "ftp://zz"}).Bytes(), &mockRepo{}, &mockEncoder{}, true},
+		{"unmarshal_fail", badMsg, &mockRepo{}, &mockEncoder{}, true},
+		{"url_already_exists", goodMsg, &mockRepo{byLongURL: &model.ShortenURL{LongURL: "https://a.com"}}, &mockEncoder{}, false},
+		{"encode_fail", goodMsg, &mockRepo{}, &mockEncoder{err: errors.New("encfail")}, true},
+		{"save_fail", goodMsg, &mockRepo{saveErr: errors.New("serr")}, &mockEncoder{toCode: "xxx"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := service.NewURLService(makeConfig(), tt.repo, &mockProducer{}, &mockCache{}, tt.encoder)
+			err := svc.HandleShortenURL(context.Background(), "q", tt.payload)
+			if (err != nil) != tt.errOut {
+				t.Fatalf("got err %v want error? %v", err, tt.errOut)
 			}
 		})
 	}

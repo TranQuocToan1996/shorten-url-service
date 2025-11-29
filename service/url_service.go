@@ -22,7 +22,7 @@ type URLService interface {
 	GetDecode(ctx context.Context, shortenURL string) (*model.ShortenURL, error)
 }
 
-type urlService struct {
+type UrlService struct {
 	queueName string
 	urlRepo   repo.URLRepository
 	producer  queue.Producer
@@ -36,19 +36,20 @@ func NewURLService(
 	urlRepo repo.URLRepository,
 	producer queue.Producer,
 	cache cache.Cache,
+	encoder URLEncoder,
 ) URLService {
-	return &urlService{
+	return &UrlService{
 		queueName: config.QUEUE_NAME,
 		urlRepo:   urlRepo,
 		producer:  producer,
-		encoder:   NewBase62Encoder(config),
+		encoder:   encoder,
 		config:    config,
 		cache:     cache,
 	}
 }
 
 // TODO: Save submit status -> fail/ok
-func (s *urlService) SubmitURL(ctx context.Context, longURL string) error {
+func (s *UrlService) SubmitURL(ctx context.Context, longURL string) error {
 	if !url_utils.IsValidURL(longURL) {
 		return fmt.Errorf("invalid URL: %s", longURL)
 	}
@@ -56,7 +57,7 @@ func (s *urlService) SubmitURL(ctx context.Context, longURL string) error {
 	return s.producer.Publish(ctx, s.queueName, msg.Bytes())
 }
 
-func (s *urlService) HandleShortenURL(ctx context.Context, queueName string, payload []byte) error {
+func (s *UrlService) HandleShortenURL(ctx context.Context, queueName string, payload []byte) error {
 	msg := dto.URLMessage{}
 	err := msg.Unmarshal(payload)
 	if err != nil {
@@ -89,7 +90,7 @@ func (s *urlService) HandleShortenURL(ctx context.Context, queueName string, pay
 	return nil
 }
 
-func (s *urlService) GetDecode(ctx context.Context, shortenURL string) (*model.ShortenURL, error) {
+func (s *UrlService) GetDecode(ctx context.Context, shortenURL string) (*model.ShortenURL, error) {
 	code := strings.TrimPrefix(shortenURL, s.config.REDIRECT_HOST)
 
 	// Try to get from cache first
@@ -120,6 +121,6 @@ func (s *urlService) GetDecode(ctx context.Context, shortenURL string) (*model.S
 	return result, nil
 }
 
-func (s *urlService) UrlCacheKey(code string) string {
+func (s *UrlService) UrlCacheKey(code string) string {
 	return fmt.Sprintf("url:code:%s", code)
 }

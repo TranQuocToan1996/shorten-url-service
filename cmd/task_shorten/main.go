@@ -51,7 +51,7 @@ func main() {
 	// Initialize dependencies
 	urlRepo := repo.NewURLRepository(database)
 	cache := redis_cache.NewRedisCache(redisClient)
-	urlService := service.NewURLService(*cfg, urlRepo, nil, cache)
+	urlService := service.NewURLService(*cfg, urlRepo, nil, cache, service.NewBase62Encoder(*cfg))
 
 	consumerName := fmt.Sprintf("shorten-url-worker-%s", uuid.NewString())
 	log.Printf("Consumer shorten_URL start: %v", consumerName)
