@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"shorten/pkg/cache/redis_cache"
 	"shorten/pkg/config"
 	"shorten/pkg/db"
 	"shorten/pkg/queue/redis_stream"
@@ -47,7 +48,8 @@ func main() {
 
 	// Initialize dependencies
 	urlRepo := repo.NewURLRepository(database)
-	urlService := service.NewURLService(*cfg, urlRepo, nil)
+	cache := redis_cache.NewRedisCache(redisClient)
+	urlService := service.NewURLService(*cfg, urlRepo, nil, cache)
 
 	// Create consumer with handler
 	consumer, err := redis_stream.NewRedisStreamConsumer(

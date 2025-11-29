@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"shorten/model"
+	"shorten/pkg/cache"
 	"shorten/pkg/config"
 	"shorten/pkg/dto"
 	"shorten/pkg/queue"
@@ -25,12 +28,14 @@ type urlService struct {
 	producer  queue.Producer
 	encoder   URLEncoder
 	config    config.Config
+	cache     cache.Cache
 }
 
 func NewURLService(
 	config config.Config,
 	urlRepo repo.URLRepository,
 	producer queue.Producer,
+	cache cache.Cache,
 ) URLService {
 	return &urlService{
 		queueName: config.QUEUE_NAME,
@@ -38,6 +43,7 @@ func NewURLService(
 		producer:  producer,
 		encoder:   NewBase62Encoder(config),
 		config:    config,
+		cache:     cache,
 	}
 }
 
@@ -74,10 +80,41 @@ func (s *urlService) HandleShortenURL(ctx context.Context, queueName string, pay
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
 func (s *urlService) GetDecode(ctx context.Context, shortenURL string) (*model.ShortenURL, error) {
 	code := strings.TrimPrefix(shortenURL, s.config.DB_HOST)
-	return s.urlRepo.GetByCode(code)
+
+	// Try to get from cache first
+	cacheKey := s.UrlCacheKey(code)
+	cachedData, err := s.cache.Get(ctx, cacheKey)
+	if err == nil {
+		// Cache hit - unmarshal and return
+		var shortenURL model.ShortenURL
+		if err := json.Unmarshal(cachedData, &shortenURL); err == nil {
+			return &shortenURL, nil
+		}
+		// If unmarshal fails, continue to database lookup
+	}
+
+	// Cache miss or error - get from database
+	result, err := s.urlRepo.GetByCode(code)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in cache for future requests (cache-aside pattern)
+	if result != nil {
+		if data, err := json.Marshal(result); err == nil {
+			go s.cache.Set(context.Background(), cacheKey, data, time.Hour)
+		}
+	}
+
+	return result, nil
+}
+
+func (s *urlService) UrlCacheKey(code string) string {
+	return fmt.Sprintf("url:code:%s", code)
 }

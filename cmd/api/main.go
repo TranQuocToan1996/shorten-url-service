@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"shorten/handler"
+	"shorten/pkg/cache/redis_cache"
 	"shorten/pkg/config"
 	"shorten/pkg/db"
 	"shorten/pkg/db/migrations"
@@ -64,7 +65,8 @@ func main() {
 	r := gin.Default()
 
 	urlRepo := repo.NewURLRepository(database)
-	urlService := service.NewURLService(*cfg, urlRepo, redis_stream.NewRedisStreamProducer(redisClient))
+	cache := redis_cache.NewRedisCache(redisClient)
+	urlService := service.NewURLService(*cfg, urlRepo, redis_stream.NewRedisStreamProducer(redisClient), cache)
 	urlHandler := handler.NewShortenURLHandler(urlService)
 
 	// Swagger
