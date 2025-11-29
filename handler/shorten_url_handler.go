@@ -7,6 +7,7 @@ import (
 	"shorten/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/copier"
 )
 
 type ShortenURLHandler struct {
@@ -46,5 +47,7 @@ func (h *ShortenURLHandler) GetDecode(c *gin.Context) {
 		sendErrorResponse(c, http.StatusInternalServerError, "fail", err.Error())
 		return
 	}
-	sendAPIResponse(c, http.StatusOK, "ok", "success", urlObj)
+	response := dto.GetDecodeURLResponse{}
+	copier.Copy(urlObj, response)
+	sendAPIResponse(c, http.StatusOK, "ok", "success", response)
 }
