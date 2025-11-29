@@ -5,15 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"runtime"
 	"strings"
 	"time"
 
 	"shorten/pkg/queue"
+	"shorten/pkg/utils/patterns"
 
 	"github.com/redis/go-redis/v9"
 )
 
 // TODO: Retry logic redis stream
+// TODO: delete msg after ack, config maxlen
 type redisStreamConsumer struct {
 	client       *redis.Client
 	handler      queue.MessageHandler
@@ -27,6 +30,7 @@ type redisStreamConsumer struct {
 	ensureGroup  bool
 	pendingIdle  time.Duration
 	reclaimBatch int64
+	pool         *patterns.WorkerPool
 }
 
 var _ queue.Consumer = (*redisStreamConsumer)(nil)
@@ -39,6 +43,9 @@ func NewRedisStreamConsumer(client *redis.Client, handler queue.MessageHandler, 
 		return nil, errors.New("message handler is required")
 	}
 
+	pool := patterns.NewWorkerPool(runtime.NumCPU() * 16)
+	pool.Run()
+
 	c := &redisStreamConsumer{
 		client:       client,
 		handler:      handler,
@@ -50,6 +57,7 @@ func NewRedisStreamConsumer(client *redis.Client, handler queue.MessageHandler, 
 		valueField:   defaultValueField,
 		pendingIdle:  10 * time.Second,
 		reclaimBatch: 20,
+		pool:         pool,
 	}
 
 	for _, opt := range opts {
@@ -101,11 +109,13 @@ func (c *redisStreamConsumer) Consume(ctx context.Context, queueName string, _ [
 
 		for _, str := range res {
 			for _, msg := range str.Messages {
-				if err := c.processMessage(ctx, queueName, msg); err != nil {
-					log.Printf("Failed to process message %s: %v", msg.ID, err)
-					// Don't return - continue with next message
-					continue
-				}
+				msgCopy := msg
+				c.pool.Submit(func() error {
+					if err := c.processMessage(ctx, queueName, msgCopy); err != nil {
+						log.Printf("Failed to process message %s: %v", msgCopy.ID, err)
+					}
+					return nil // Always return nil so worker continues
+				})
 			}
 		}
 	}
@@ -115,6 +125,7 @@ func (c *redisStreamConsumer) Close() error {
 	if c.closeClient && c.client != nil {
 		return c.client.Close()
 	}
+	c.pool.Close()
 	return nil
 }
 
@@ -162,11 +173,13 @@ func (c *redisStreamConsumer) reclaimPending(ctx context.Context, queueName stri
 	}
 
 	for _, msg := range claimed {
-		if err := c.processMessage(ctx, queueName, msg); err != nil {
-			log.Printf("Failed to process reclaimed message %s: %v", msg.ID, err)
-			// Don't return - continue with next message
-			continue
-		}
+		msgCopy := msg
+		c.pool.Submit(func() error {
+			if err := c.processMessage(ctx, queueName, msgCopy); err != nil {
+				log.Printf("Failed to process message %s: %v", msgCopy.ID, err)
+			}
+			return nil // Always return nil so worker continues
+		})
 	}
 
 	return nil
@@ -189,6 +202,8 @@ func (c *redisStreamConsumer) processMessage(ctx context.Context, queueName stri
 		if err := c.client.XAck(ctx, queueName, c.group, msg.ID).Err(); err != nil {
 			return err
 		}
+		// Delete msg in stream after process
+		// c.client.XDel(ctx, queueName, msg.ID).Err()
 	}
 
 	return nil
