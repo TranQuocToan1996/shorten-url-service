@@ -48,6 +48,6 @@ func (h *ShortenURLHandler) GetDecode(c *gin.Context) {
 		return
 	}
 	response := dto.GetDecodeURLResponse{}
-	copier.Copy(urlObj, response)
+	copier.Copy(urlObj, &response)
 	sendAPIResponse(c, http.StatusOK, "ok", "success", response)
 }
