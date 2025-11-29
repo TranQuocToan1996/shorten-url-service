@@ -1,5 +1,9 @@
 package dto
 
 type SubmitShortenURLRequest struct {
-	URL string `json:"number" binding:"required"`
+	LongURL string `json:"number" binding:"required,url"`
+}
+
+type GetDecodeURLRequest struct {
+	ShortenURL string `json:"number" binding:"required,url"`
 }

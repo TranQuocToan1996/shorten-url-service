@@ -16,7 +16,7 @@ func LoadConfig() *Config {
 		DB_NAME:          getEnvOrDefault("DB_NAME", "shorten-url-services"),
 		DB_SSLMODE:       getEnvOrDefault("DB_SSLMODE", "disable"),
 		QUEUE_NAME:       getEnvOrDefault("FACTORIAL_CAL_SERVICES_QUEUE_NAME", "default-queue"),
-		SWAGGER_HOST:     getEnvOrDefault("SWAGGER_HOST", "localhost:8080"),
+		HOST:             getEnvOrDefault("HOST", "localhost:8080"),
 		REDIS_HOST:       getEnvOrDefault("REDIS_HOST", "localhost"),
 		REDIS_PORT:       getEnvOrDefault("REDIS_PORT", "6379"),
 		REDIS_PASSWORD:   getEnvOrDefault("REDIS_PASSWORD", ""),
@@ -34,7 +34,7 @@ type Config struct {
 	DB_NAME          string `mapstructure:"DB_NAME"`
 	DB_SSLMODE       string `mapstructure:"DB_SSLMODE"`
 	QUEUE_NAME       string `mapstructure:"QUEUE_NAME"`
-	SWAGGER_HOST     string `mapstructure:"SWAGGER_HOST"`
+	HOST             string `mapstructure:"HOST"`
 	REDIS_HOST       string `mapstructure:"REDIS_HOST"`
 	REDIS_PORT       string `mapstructure:"REDIS_PORT"`
 	REDIS_PASSWORD   string `mapstructure:"REDIS_PASSWORD"`

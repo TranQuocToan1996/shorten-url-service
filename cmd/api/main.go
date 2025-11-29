@@ -68,8 +68,8 @@ func main() {
 	urlHandler := handler.NewShortenURLHandler(urlService)
 
 	// Swagger
-	if cfg.SWAGGER_HOST != "" {
-		docs.SwaggerInfo.Host = cfg.SWAGGER_HOST
+	if cfg.HOST != "" {
+		docs.SwaggerInfo.Host = cfg.HOST
 	}
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -79,9 +79,9 @@ func main() {
 	// API routes
 	v1 := r.Group("/api/v1")
 	{
-		v1.POST("/encode", urlHandler.SubmitShortURL)
+		v1.POST("/encode", urlHandler.SubmitEncode)
+		v1.GET("/decode", urlHandler.GetDecode)
 		// TODO: Implement
-		// v1.POST("/decode", urlHandler.SubmitShortURL)
 		// v1.POST("/decode/:code", urlHandler.SubmitShortURL)
 	}
 

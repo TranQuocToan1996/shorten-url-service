@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"shorten/model"
 	"shorten/pkg/config"
@@ -13,8 +14,9 @@ import (
 )
 
 type URLService interface {
-	SubmitURL(ctx context.Context, url string) error
+	SubmitURL(ctx context.Context, longURL string) error
 	HandleShortenURL(ctx context.Context, queueName string, payload []byte) error
+	GetDecode(ctx context.Context, shortenURL string) (*model.ShortenURL, error)
 }
 
 type urlService struct {
@@ -22,6 +24,7 @@ type urlService struct {
 	urlRepo   repo.URLRepository
 	producer  queue.Producer
 	encoder   URLEncoder
+	config    config.Config
 }
 
 func NewURLService(
@@ -34,15 +37,16 @@ func NewURLService(
 		urlRepo:   urlRepo,
 		producer:  producer,
 		encoder:   NewBase62Encoder(config),
+		config:    config,
 	}
 }
 
 // TODO: Save submit status -> fail/ok
-func (s *urlService) SubmitURL(ctx context.Context, url string) error {
-	if !url_utils.IsValidURL(url) {
-		return fmt.Errorf("invalid URL: %s", url)
+func (s *urlService) SubmitURL(ctx context.Context, longURL string) error {
+	if !url_utils.IsValidURL(longURL) {
+		return fmt.Errorf("invalid URL: %s", longURL)
 	}
-	msg := dto.URLMessage{URL: url}
+	msg := dto.URLMessage{URL: longURL}
 	return s.producer.Publish(ctx, s.queueName, msg.Bytes())
 }
 
@@ -71,4 +75,9 @@ func (s *urlService) HandleShortenURL(ctx context.Context, queueName string, pay
 		return err
 	}
 	return nil
+}
+
+func (s *urlService) GetDecode(ctx context.Context, shortenURL string) (*model.ShortenURL, error) {
+	code := strings.TrimPrefix(shortenURL, s.config.DB_HOST)
+	return s.urlRepo.GetByCode(code)
 }
