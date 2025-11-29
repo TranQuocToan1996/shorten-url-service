@@ -23,51 +23,51 @@ func TestNewBase62Encoder(t *testing.T) {
 			wantLength:    10,
 			wantSecretKey: "test-secret",
 		},
-		// {
-		// 	name: "valid_config_with_default_length",
-		// 	cfg: config.Config{
-		// 		SECRET_KEY:       "my-secret-key",
-		// 		SHORT_URL_LENGTH: "8",
-		// 	},
-		// 	wantLength:    8,
-		// 	wantSecretKey: "my-secret-key",
-		// },
-		// {
-		// 	name: "invalid_length_falls_back_to_default",
-		// 	cfg: config.Config{
-		// 		SECRET_KEY:       "secret",
-		// 		SHORT_URL_LENGTH: "invalid",
-		// 	},
-		// 	wantLength:    8,
-		// 	wantSecretKey: "secret",
-		// },
-		// {
-		// 	name: "empty_length_falls_back_to_default",
-		// 	cfg: config.Config{
-		// 		SECRET_KEY:       "secret",
-		// 		SHORT_URL_LENGTH: "",
-		// 	},
-		// 	wantLength:    8,
-		// 	wantSecretKey: "secret",
-		// },
-		// {
-		// 	name: "zero_length_falls_back_to_default",
-		// 	cfg: config.Config{
-		// 		SECRET_KEY:       "secret",
-		// 		SHORT_URL_LENGTH: "0",
-		// 	},
-		// 	wantLength:    0,
-		// 	wantSecretKey: "secret",
-		// },
-		// {
-		// 	name: "empty_secret_key",
-		// 	cfg: config.Config{
-		// 		SECRET_KEY:       "",
-		// 		SHORT_URL_LENGTH: "8",
-		// 	},
-		// 	wantLength:    8,
-		// 	wantSecretKey: "",
-		// },
+		{
+			name: "valid_config_with_default_length",
+			cfg: config.Config{
+				SECRET_KEY:       "my-secret-key",
+				SHORT_URL_LENGTH: "8",
+			},
+			wantLength:    8,
+			wantSecretKey: "my-secret-key",
+		},
+		{
+			name: "invalid_length_falls_back_to_default",
+			cfg: config.Config{
+				SECRET_KEY:       "secret",
+				SHORT_URL_LENGTH: "invalid",
+			},
+			wantLength:    8,
+			wantSecretKey: "secret",
+		},
+		{
+			name: "empty_length_falls_back_to_default",
+			cfg: config.Config{
+				SECRET_KEY:       "secret",
+				SHORT_URL_LENGTH: "",
+			},
+			wantLength:    8,
+			wantSecretKey: "secret",
+		},
+		{
+			name: "zero_length_falls_back_to_default",
+			cfg: config.Config{
+				SECRET_KEY:       "secret",
+				SHORT_URL_LENGTH: "0",
+			},
+			wantLength:    0,
+			wantSecretKey: "secret",
+		},
+		{
+			name: "empty_secret_key",
+			cfg: config.Config{
+				SECRET_KEY:       "",
+				SHORT_URL_LENGTH: "8",
+			},
+			wantLength:    8,
+			wantSecretKey: "",
+		},
 	}
 
 	for _, tt := range tests {
