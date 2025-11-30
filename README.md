@@ -35,7 +35,24 @@
 ![Diagram](/docs/drawing/shorten_url.png)
 
 ## Security
-1. Password/Secret save in secret manager AWS.
+1. Passwords/Secrets should always be stored in a secret manager (e.g., AWS Secrets Manager or SSM Parameter Store). Never commit them in code or plain environment files.
+2. Apply the principle of least privilege. IAM roles/policies attaching to the app should only permit access to needed secrets/parameters—never wildcards or user credentials.
+3. Rotate secrets regularly. Use automated rotation where supported, and ensure rotation does not cause downtime.
+4. Audit all access to secrets. Enable logging for every read (CloudTrail for AWS Secrets Manager).
+5. NEVER log secrets or sensitive config. Mask all secrets by default in your logs.
+6. For defense-in-depth, also protect environment variables by minimizing access (avoid `env` endpoints, never print at runtime).
+7. Isolate network access: Run your backend inside a VPC/private subnet and use security groups to restrict traffic to what’s strictly necessary—this reduces risk of lateral movement even if a container is compromised.
+8. When fetching secrets at runtime, cache in-memory as little as possible, dispose on shutdown, and never expose via HTTP endpoints.
+9. Attack vector: Compromised CI/CD pipeline—only allow secret access from the production runtime, NOT during build/test steps where possible.
+10. If you use Kubernetes, use KMS-backed sealed secrets or external secrets controllers instead of config maps, and never mount secrets as plain files.
+11. Use defense layers (WAF, API Gateway) to block malicious requests—including those attempting SSRF, command injection, or path traversal trying to trick the app into leaking secrets.
+
+# Additional Attack Vectors and Mitigation
+
+- **SSRF via user-submitted URLs**: Validate/sanitize long URLs to prevent the app from reaching internal metadata services (especially on AWS EC2).
+- **Webhook destination validation**: Validate allowed callback URLs, block internal/private IPs.
+- **Memory scraping**: Minimize secret lifetime in process memory, especially if you allow plugins/3rd-party code loading.
+- **Backup leaks**: Ensure all DB/volume/app backups are stored encrypted and access controlled.
 
 ## Improvements
 1. Webhook add HMAC sign.
@@ -53,4 +70,9 @@
 13. Automatic HTTPS (Let’s Encrypt support with certbot/cert-manager in production)
 14. CLI tool or admin panel for operational tasks (purge, re-encode, debug webhooks, etc)
 15. Seamless blue/green or canary deployment support in CI/CD (Argo Rollouts, GitHub Actions)
+
+
+
+## TODO:
+1. CICD deploy to AWS
 
