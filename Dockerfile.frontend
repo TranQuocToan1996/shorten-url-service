@@ -1,0 +1,49 @@
+# -----------------------------
+# Build stage
+# -----------------------------
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Install dependencies needed to build native modules
+RUN apk add --no-cache python3 g++ make bash
+
+# Copy package files first for better caching
+COPY frontend/fe_shorten_url/package.json frontend/fe_shorten_url/package-lock.json ./
+
+# Install all dependencies (including devDependencies) for build
+# Using npm install instead of npm ci because lock file may be out of sync
+# --prefer-offline uses cache when available, --no-audit speeds up install
+RUN npm install --prefer-offline --ignore-scripts && \
+    npm cache clean --force
+
+# Copy source code
+COPY frontend/fe_shorten_url/ .
+
+# Build Next.js application (standalone output)
+RUN npm run build
+
+# -----------------------------
+# Production stage
+# -----------------------------
+FROM node:20-alpine AS frontend
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+
+# Copy standalone output from builder (smaller than full node_modules)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Start the standalone server
+CMD ["node", "server.js"]
+    

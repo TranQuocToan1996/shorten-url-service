@@ -115,6 +115,21 @@ services:
     env_file:
       - .env
 
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    env_file:
+      - .env
+
 volumes:
   postgres_data:
   redis_data:
