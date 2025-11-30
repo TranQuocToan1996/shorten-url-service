@@ -2,7 +2,7 @@
    URL shortening system using Golang and front end side use NextJs.
 
 ## Raw requirements: 
-[Raw Requirement md](raw_requiment.md), [AssignmentHub_raw.pdf](AssignmentHub_raw.pdf)
+[Raw Requirement md](raw_requirement.md), [AssignmentHub_raw.pdf](AssignmentHub_raw.pdf)
 
 ## How to run project
 1. In root folder: Change the name of ".env copy" to ".env". Fix the Postgres and Redis if needed.
