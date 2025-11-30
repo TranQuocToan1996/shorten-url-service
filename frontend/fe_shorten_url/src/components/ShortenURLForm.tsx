@@ -161,7 +161,7 @@ export default function ShortenURLForm() {
       </Box>
 
       {shortURL && result && (
-        <Box sx={{ mt: 3, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+        <Box sx={{ mt: 3, p: 2, borderRadius: 1, bgcolor: "#E8EFFD" }}>
           <Typography variant="subtitle2" gutterBottom>
             Shortened URL:
           </Typography>

@@ -99,13 +99,25 @@ export default function DecodeURLForm() {
       </Box>
 
       {result && (
-        <Box sx={{ mt: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+        <Box sx={{ mt: 3, p: 2, borderRadius: 1, bgcolor: "#E8EFFD" }}>
           <Typography variant="subtitle2" gutterBottom>
             Original Long URL:
           </Typography>
-          <Link href={result.long_url} target="_blank" rel="noopener noreferrer">
-            {result.long_url}
-          </Link>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Link href={result.long_url} target="_blank" rel="noopener noreferrer" sx={{ overflowWrap: 'anywhere' }}>
+              {result.long_url}
+            </Link>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={async () => {
+                if (navigator.clipboard) await navigator.clipboard.writeText(result.long_url);
+              }}
+              sx={{ minWidth: 'auto' }}
+            >
+              Copy
+            </Button>
+          </Box>
           <Box sx={{ mt: 2 }}>
             <Typography variant="caption" display="block" color="text.secondary">
               Status: {result.status}
