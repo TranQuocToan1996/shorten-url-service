@@ -13,11 +13,12 @@ import (
 	"shorten/pkg/dto"
 	"shorten/pkg/queue"
 	"shorten/pkg/utils/url_utils"
+	"shorten/pkg/webhook"
 	"shorten/repo"
 )
 
 type URLService interface {
-	SubmitURL(ctx context.Context, longURL string) error
+	SubmitURL(ctx context.Context, longURL string, callbackURL string) error
 	HandleShortenURL(ctx context.Context, queueName string, payload []byte) error
 	GetDecode(ctx context.Context, shortenURL string) (*model.ShortenURL, error)
 }
@@ -29,6 +30,7 @@ type UrlService struct {
 	encoder   URLEncoder
 	config    config.Config
 	cache     cache.Cache
+	webhook   webhook.Client
 }
 
 func NewURLService(
@@ -37,6 +39,7 @@ func NewURLService(
 	producer queue.Producer,
 	cache cache.Cache,
 	encoder URLEncoder,
+	webhook webhook.Client,
 ) URLService {
 	return &UrlService{
 		queueName: config.QUEUE_NAME,
@@ -45,15 +48,18 @@ func NewURLService(
 		encoder:   encoder,
 		config:    config,
 		cache:     cache,
+		webhook:   webhook,
 	}
 }
 
-// TODO: Save submit status -> fail/ok
-func (s *UrlService) SubmitURL(ctx context.Context, longURL string) error {
+func (s *UrlService) SubmitURL(ctx context.Context, longURL string, callbackURL string) error {
 	if !url_utils.IsValidURL(longURL) {
 		return fmt.Errorf("invalid URL: %s", longURL)
 	}
-	msg := dto.URLMessage{URL: longURL}
+	msg := dto.URLMessage{
+		URL:         longURL,
+		CallbackURL: callbackURL,
+	}
 	return s.producer.Publish(ctx, s.queueName, msg.Bytes())
 }
 
@@ -68,14 +74,22 @@ func (s *UrlService) HandleShortenURL(ctx context.Context, queueName string, pay
 	}
 	existing, err := s.urlRepo.GetByLongURL(msg.URL)
 	if err == nil && existing != nil {
-		// URL already processed, skip
+		// URL already processed, notify success
+		shortURL := fmt.Sprintf("%s/%s", s.config.REDIRECT_HOST, existing.Code)
+		s.notifyWebhook(msg.CallbackURL, dto.WebhookPayload{
+			Status:   existing.Status,
+			LongURL:  msg.URL,
+			ShortURL: shortURL,
+			Code:     existing.Code,
+		})
 		return nil
 	}
-	// TODO: Notify client ok and fail case
+
 	code, err := s.encoder.Encode(msg.URL)
 	if err != nil {
 		return err
 	}
+
 	shortenURL := &model.ShortenURL{
 		LongURL: msg.URL,
 		Code:    code,
@@ -87,7 +101,29 @@ func (s *UrlService) HandleShortenURL(ctx context.Context, queueName string, pay
 		return err
 	}
 
+	// Notify success
+	shortURL := fmt.Sprintf("%s/%s", s.config.REDIRECT_HOST, code)
+	s.notifyWebhook(msg.CallbackURL, dto.WebhookPayload{
+		Status:   shortenURL.Status,
+		LongURL:  msg.URL,
+		ShortURL: shortURL,
+		Code:     code,
+	})
+
 	return nil
+}
+
+func (s *UrlService) notifyWebhook(callbackURL string, payload dto.WebhookPayload) {
+	if s.webhook == nil || callbackURL == "" {
+		return
+	}
+	go func() {
+		if err := s.webhook.Notify(context.Background(), callbackURL, payload); err != nil {
+			// Log error but don't fail the main process
+			// In production, you might want to use a logger here
+			_ = err
+		}
+	}()
 }
 
 func (s *UrlService) GetDecode(ctx context.Context, shortenURL string) (*model.ShortenURL, error) {

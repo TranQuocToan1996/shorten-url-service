@@ -5,7 +5,8 @@ import (
 )
 
 type URLMessage struct {
-	URL string `json:"url"`
+	URL         string `json:"url"`
+	CallbackURL string `json:"callback_url,omitempty"`
 }
 
 func (m *URLMessage) Bytes() []byte {

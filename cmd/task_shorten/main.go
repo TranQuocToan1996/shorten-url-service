@@ -13,6 +13,7 @@ import (
 	"shorten/pkg/config"
 	"shorten/pkg/db"
 	"shorten/pkg/queue/redis_stream"
+	"shorten/pkg/webhook"
 	"shorten/repo"
 	"shorten/service"
 
@@ -51,7 +52,8 @@ func main() {
 	// Initialize dependencies
 	urlRepo := repo.NewURLRepository(database)
 	cache := redis_cache.NewRedisCache(redisClient)
-	urlService := service.NewURLService(*cfg, urlRepo, nil, cache, service.NewBase62Encoder(*cfg))
+	webhookClient := webhook.NewHTTPWebhookClient(10 * time.Second)
+	urlService := service.NewURLService(*cfg, urlRepo, nil, cache, service.NewBase62Encoder(*cfg), webhookClient)
 
 	consumerName := fmt.Sprintf("shorten-url-worker-%s", uuid.NewString())
 	log.Printf("Consumer shorten_URL start: %v", consumerName)

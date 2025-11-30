@@ -3,7 +3,8 @@ package dto
 import "time"
 
 type SubmitShortenURLRequest struct {
-	LongURL string `json:"long_url" binding:"required,url"`
+	LongURL     string `json:"long_url" binding:"required,url"`
+	CallbackURL string `json:"callback_url,omitempty"`
 }
 
 type GetDecodeURLRequest struct {

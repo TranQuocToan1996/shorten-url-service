@@ -35,7 +35,7 @@ func (h *ShortenURLHandler) SubmitEncode(c *gin.Context) {
 		sendErrorResponse(c, http.StatusBadRequest, "fail", err.Error())
 		return
 	}
-	err := h.urlService.SubmitURL(c.Request.Context(), req.LongURL)
+	err := h.urlService.SubmitURL(c.Request.Context(), req.LongURL, req.CallbackURL)
 	if err != nil {
 		sendErrorResponse(c, http.StatusInternalServerError, "fail", err.Error())
 		return

@@ -94,8 +94,8 @@ func TestSubmitURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &mockProducer{err: tt.prodErr}
-			us := service.NewURLService(makeConfig(), &mockRepo{}, p, &mockCache{}, service.NewBase62Encoder(makeConfig()))
-			err := us.SubmitURL(context.Background(), tt.url)
+			us := service.NewURLService(makeConfig(), &mockRepo{}, p, &mockCache{}, service.NewBase62Encoder(makeConfig()), nil)
+			err := us.SubmitURL(context.Background(), tt.url, "")
 			if (err != nil) != (tt.errOut != nil) {
 				t.Fatalf("err mismatch, got %v, want %v", err, tt.errOut)
 			}
@@ -129,7 +129,7 @@ func TestGetDecode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			us := service.NewURLService(cfg, tt.repo, &mockProducer{}, tt.cache, service.NewBase62Encoder(makeConfig()))
+			us := service.NewURLService(cfg, tt.repo, &mockProducer{}, tt.cache, service.NewBase62Encoder(makeConfig()), nil)
 			res, err := us.GetDecode(context.Background(), tt.inputURL)
 			if tt.errExpected && err == nil {
 				t.Fatalf("expected error, got none")
@@ -165,7 +165,7 @@ func TestHandleShortenURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := service.NewURLService(makeConfig(), tt.repo, &mockProducer{}, &mockCache{}, tt.encoder)
+			svc := service.NewURLService(makeConfig(), tt.repo, &mockProducer{}, &mockCache{}, tt.encoder, nil)
 			err := svc.HandleShortenURL(context.Background(), "q", tt.payload)
 			if (err != nil) != tt.errOut {
 				t.Fatalf("got err %v want error? %v", err, tt.errOut)

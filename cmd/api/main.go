@@ -15,6 +15,7 @@ import (
 	"shorten/pkg/db"
 	"shorten/pkg/db/migrations"
 	"shorten/pkg/queue/redis_stream"
+	"shorten/pkg/webhook"
 	"shorten/repo"
 	"shorten/service"
 
@@ -66,7 +67,8 @@ func main() {
 
 	urlRepo := repo.NewURLRepository(database)
 	cache := redis_cache.NewRedisCache(redisClient)
-	urlService := service.NewURLService(*cfg, urlRepo, redis_stream.NewRedisStreamProducer(redisClient), cache, service.NewBase62Encoder(*cfg))
+	webhookClient := webhook.NewHTTPWebhookClient(10 * time.Second)
+	urlService := service.NewURLService(*cfg, urlRepo, redis_stream.NewRedisStreamProducer(redisClient), cache, service.NewBase62Encoder(*cfg), webhookClient)
 	urlHandler := handler.NewShortenURLHandler(urlService, *cfg)
 
 	// Swagger

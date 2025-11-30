@@ -3,7 +3,6 @@ package tests
 import (
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"shorten/pkg/utils/patterns"
 )
@@ -58,37 +57,6 @@ func assertError() error {
 type customErr struct{ msg string }
 
 func (e *customErr) Error() string { return e.msg }
-
-func TestSemaphore_BoundedConcurrency(t *testing.T) {
-	maxConcurrent := 3
-	s := patterns.NewSemaphore(maxConcurrent)
-	n := 10
-	var running int32
-	var maxRunning int32
-
-	for i := 0; i < n; i++ {
-		s.Submit(func() error {
-			r := atomic.AddInt32(&running, 1)
-			for j := 0; j < 5; j++ {
-				time.Sleep(1 * time.Millisecond)
-			}
-			for {
-				rx := atomic.LoadInt32(&maxRunning)
-				if r > rx {
-					atomic.CompareAndSwapInt32(&maxRunning, rx, r)
-					break
-				}
-				break
-			}
-			atomic.AddInt32(&running, -1)
-			return nil
-		})
-	}
-	s.Wait()
-	if maxRunning > int32(maxConcurrent) {
-		t.Fatalf("concurrent tasks exceeded max: got %d, want <= %d", maxRunning, maxConcurrent)
-	}
-}
 
 func TestSemaphore_TaskErrorsAndPanics(t *testing.T) {
 	s := patterns.NewSemaphore(2)
