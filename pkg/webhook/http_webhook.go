@@ -1,28 +1,32 @@
 package webhook
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
+	"log"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 )
 
 type httpWebhookClient struct {
-	client  *http.Client
-	timeout time.Duration
+	client *resty.Request
 }
 
-func NewHTTPWebhookClient(timeout time.Duration) Client {
-	if timeout <= 0 {
-		timeout = 10 * time.Second
-	}
+func NewRestyRequest() *resty.Request {
+	return resty.New().
+		SetTimeout(10 * time.Second).
+		SetRetryCount(10).
+		SetRetryWaitTime(100 * time.Millisecond).
+		SetRetryMaxWaitTime(2 * time.Second).
+		SetContentLength(true).
+		SetDebug(false).
+		NewRequest()
+}
+
+func NewHTTPWebhookClient() Client {
+	client := NewRestyRequest()
 	return &httpWebhookClient{
-		client: &http.Client{
-			Timeout: timeout,
-		},
-		timeout: timeout,
+		client: client,
 	}
 }
 
@@ -31,27 +35,14 @@ func (w *httpWebhookClient) Notify(ctx context.Context, callbackURL string, payl
 		return nil
 	}
 
-	data, err := json.Marshal(payload)
+	resp, err := w.client.
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json").
+		Post(callbackURL)
 	if err != nil {
-		return fmt.Errorf("marshal webhook payload: %w", err)
+		log.Printf("httpWebhookClient, callbackURL [%v], payload [%v],err [%v]", callbackURL, payload, err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, callbackURL, bytes.NewBuffer(data))
-	if err != nil {
-		return fmt.Errorf("create webhook request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := w.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("send webhook request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("webhook returned status %d", resp.StatusCode)
-	}
-
+	log.Printf("httpWebhookClient, callbackURL [%v], payload [%v],callbackURL, payloadbody [%v], status [%v]", callbackURL, payload, resp.String(), resp.Status())
 	return nil
 }
