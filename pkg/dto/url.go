@@ -10,6 +10,9 @@ type SubmitShortenURLRequest struct {
 type GetDecodeURLRequest struct {
 	ShortenURL string `form:"shorten_url" binding:"required"`
 }
+type GetEncodeURLRequestByLongURL struct {
+	LongURL string `form:"long_url" binding:"required,url"`
+}
 
 type GetDecodeURLResponse struct {
 	ID        int64     `gorm:"column:id" json:"id"`

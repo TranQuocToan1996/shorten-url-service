@@ -85,6 +85,7 @@ func main() {
 	{
 		v1.POST("/encode", urlHandler.SubmitEncode)
 		v1.GET("/decode", urlHandler.GetDecode)
+		v1.GET("/urls/long", urlHandler.GetURLEncodeByLongURL)
 		v1.GET("/:code", urlHandler.RedirectLongURL)
 	}
 

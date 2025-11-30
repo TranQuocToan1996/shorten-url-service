@@ -21,6 +21,7 @@ type URLService interface {
 	SubmitURL(ctx context.Context, longURL string, callbackURL string) error
 	HandleShortenURL(ctx context.Context, queueName string, payload []byte) error
 	GetDecode(ctx context.Context, shortenURL string) (*model.ShortenURL, error)
+	GetByLongURL(ctx context.Context, longURL string) (*model.ShortenURL, error)
 }
 
 type UrlService struct {
@@ -155,6 +156,10 @@ func (s *UrlService) GetDecode(ctx context.Context, shortenURL string) (*model.S
 	}
 
 	return result, nil
+}
+
+func (s *UrlService) GetByLongURL(ctx context.Context, longURL string) (*model.ShortenURL, error) {
+	return s.urlRepo.GetByLongURL(longURL)
 }
 
 func (s *UrlService) UrlCacheKey(code string) string {

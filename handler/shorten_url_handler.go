@@ -60,6 +60,22 @@ func (h *ShortenURLHandler) GetDecode(c *gin.Context) {
 	sendAPIResponse(c, http.StatusOK, "ok", "success", response)
 }
 
+func (h *ShortenURLHandler) GetURLEncodeByLongURL(c *gin.Context) {
+	var req dto.GetEncodeURLRequestByLongURL
+	if err := c.ShouldBindQuery(&req); err != nil {
+		sendErrorResponse(c, http.StatusBadRequest, "fail", err.Error())
+		return
+	}
+	urlObj, err := h.urlService.GetByLongURL(c.Request.Context(), req.LongURL)
+	if err != nil {
+		sendErrorResponse(c, http.StatusInternalServerError, "fail", err.Error())
+		return
+	}
+	response := dto.GetDecodeURLResponse{}
+	copier.Copy(&response, urlObj)
+	sendAPIResponse(c, http.StatusOK, "ok", "success", response)
+}
+
 func (h *ShortenURLHandler) RedirectLongURL(c *gin.Context) {
 	const maxCodeLength = 10
 	code := c.Param("code")
