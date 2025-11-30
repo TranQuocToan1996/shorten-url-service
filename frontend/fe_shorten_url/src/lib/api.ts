@@ -1,6 +1,6 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
   code: number;
   status: string;
   message: string;
@@ -51,11 +51,11 @@ export async function getByLongURL(longURL: string): Promise<APIResponse<Shorten
 
   if (!response.ok) {
     if (response.status === 404) {
-      const error = new Error('URL not found');
-      (error as any).status = 404;
+      const error = new Error('URL not found') as Error & { status?: number };
+      error.status = 404;
       throw error;
     }
-    const error = await response.json();
+    const error = await response.json() as { message?: string };
     throw new Error(error.message || 'Failed to get URL');
   }
 

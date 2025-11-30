@@ -49,7 +49,7 @@ export default function ShortenURLForm() {
     try {
       // Submit URL
       await submitURL(longURL);
-      
+
       // Start polling
       setPolling(true);
       let attempts = 0;
@@ -57,11 +57,11 @@ export default function ShortenURLForm() {
       const poll = async () => {
         try {
           const response = await getByLongURL(longURL);
-          
+
           if (response.data && response.data.status === 'encoded') {
             setResult(response.data);
-            const redirectHost = process.env.NEXT_PUBLIC_REDIRECT_HOST || 'http://localhost:8080';
-            // Remove trailing slash if present
+            const redirectHost = process.env.NEXT_PUBLIC_REDIRECT_HOST || 'http://localhost:8080/api/v1';
+            // Remove trailing slash if present, then add code
             const cleanHost = redirectHost.replace(/\/$/, '');
             setShortURL(`${cleanHost}/${response.data.code}`);
             setPolling(false);
@@ -79,9 +79,10 @@ export default function ShortenURLForm() {
 
           // Continue polling
           setTimeout(poll, POLL_INTERVAL);
-        } catch (err: any) {
+        } catch (err) {
           // If 404, continue polling (URL not ready yet)
-          if (err.status === 404 || err.message?.includes('404') || err.message?.includes('not found')) {
+          const error = err as Error & { status?: number };
+          if (error.status === 404 || error.message?.includes('404') || error.message?.includes('not found')) {
             attempts++;
             if (attempts >= MAX_POLL_ATTEMPTS) {
               setError('Timeout: URL encoding is taking longer than expected. Please try again later.');
@@ -91,7 +92,7 @@ export default function ShortenURLForm() {
             }
             setTimeout(poll, POLL_INTERVAL);
           } else {
-            setError(err.message || 'Failed to get shortened URL');
+            setError(error.message || 'Failed to get shortened URL');
             setPolling(false);
             setLoading(false);
           }
@@ -100,8 +101,9 @@ export default function ShortenURLForm() {
 
       // Start polling after a short delay
       setTimeout(poll, POLL_INTERVAL);
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit URL');
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || 'Failed to submit URL');
       setLoading(false);
       setPolling(false);
     }
@@ -113,7 +115,7 @@ export default function ShortenURLForm() {
         await navigator.clipboard.writeText(shortURL);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
+      } catch {
         setError('Failed to copy to clipboard');
       }
     }

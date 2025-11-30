@@ -32,10 +32,11 @@ export default function DecodeURLForm() {
     // Normalize the URL - add protocol if missing
     let normalizedURL = shortenURL.trim();
     if (!normalizedURL.startsWith('http://') && !normalizedURL.startsWith('https://')) {
-      // If it's just a code, prepend default host
+      // If it's just a code, prepend default host with /api/v1 prefix
       if (!normalizedURL.includes('/')) {
-        const defaultHost = process.env.NEXT_PUBLIC_REDIRECT_HOST || 'http://localhost:8080';
-        normalizedURL = `${defaultHost}/${normalizedURL}`;
+        const defaultHost = process.env.NEXT_PUBLIC_REDIRECT_HOST || 'http://localhost:8080/api/v1';
+        const cleanHost = defaultHost.replace(/\/$/, '');
+        normalizedURL = `${cleanHost}/${normalizedURL}`;
       } else {
         normalizedURL = `http://${normalizedURL}`;
       }
@@ -45,14 +46,15 @@ export default function DecodeURLForm() {
 
     try {
       const response = await decodeURL(normalizedURL);
-      
+
       if (response.data) {
         setResult(response.data);
       } else {
         setError('No data returned from server');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to decode URL');
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || 'Failed to decode URL');
     } finally {
       setLoading(false);
     }
@@ -73,7 +75,7 @@ export default function DecodeURLForm() {
           label="Shortened URL"
           value={shortenURL}
           onChange={(e) => setShortenURL(e.target.value)}
-          placeholder="http://localhost:8080/abc123"
+          placeholder="http://localhost:8080/api/v1/abc123"
           error={!!error && !loading}
           disabled={loading}
           sx={{ mb: 2 }}
