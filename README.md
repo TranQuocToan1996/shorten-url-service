@@ -1,75 +1,56 @@
-TODO: Lập list ưu tiên các tiêu chí
-Để đánh giá **một hệ thống URL rút gọn** hoặc code cho URL rút gọn là tốt, bạn có thể xem xét các tiêu chí sau:
+## Project
+   URL shortening system using Golang and front end side use NextJs.
 
----
+## Raw requirements: 
+[Raw Requirement md](raw_requiment.md), [AssignmentHub_raw.pdf](AssignmentHub_raw.pdf)
 
-1. **Deterministic / Consistency**
+## How to run project
+1. In root folder: Change the name of ".env copy" to ".env". Fix the Postgres and Redis if needed.
+2. In ./frontend/fe_shorten_url folder: Change the name of ".env.local" to ".env". Fix the Postgres and Redis if needed. Fix the API service link if needed.
+3. In the root folder: run command "Docker compose up -d"
 
-   * Cùng một URL phải luôn ra cùng một short code nếu muốn tránh trùng lặp trong DB.
-   * Hệ thống nên kiểm tra tồn tại trước khi tạo mới.
-
-2. **Độ ngắn và hiệu quả**
-
-   * Short code càng ngắn càng dễ chia sẻ.
-   * Base62 hoặc Base64 URL-safe là phổ biến.
-   * Tránh quá ngắn → dễ đoán / brute-force.
-
-3. **Độ bảo mật**
-
-   * Không để short code lộ thông tin nội bộ (ID, số thứ tự).
-   * Sử dụng HMAC hoặc salt để tránh đoán URL.
-   * Kiểm soát URL nguy hiểm (malware/phishing).
-
-4. **Hiệu năng / Scalability**
-
-   * Hệ thống phải xử lý hàng triệu URL nhanh chóng.
-   * Tránh truy vấn DB quá nhiều → có thể cache mapping.
-   * Có thể phân tán / shard DB nếu lượng URL lớn.
-
-5. **Collision handling**
-
-   * Phải có cách xử lý khi hash/short code trùng nhau (có thể append ký tự, rehash…).
-
-6. **Quản lý metadata**
-
-   * Dễ tracking số click, nguồn truy cập.
-   * Có thể thêm expiry time, owner info, hoặc analytics.
-
-7. **Khả năng mở rộng / maintainability**
-
-   * Code phải dễ maintain, dễ mở rộng tính năng mới.
-   * Cấu trúc rõ ràng, modular, testable.
-
-8. **Kiểm soát lỗi và logging**
-
-   * Xử lý URL không hợp lệ, lỗi encode/decode.
-   * Log đầy đủ nhưng không lộ thông tin nhạy cảm.
-
-9. **User experience**
-
-   * Redirect nhanh, không delay.
-   * Có trang preview nếu cần.
-
-10. **Thống kê và báo cáo**
-
-    * Cho phép xem URL nào được click nhiều, từ đâu, thời gian…
-    * Hỗ trợ phân tích mà không làm chậm redirect.
-
----
+## How to test
+1. Default setting for Backend API: "http://localhost:8080"
+2. Default setting for Frontend: "http://localhost:3000"
 
 
-TODO: Các thuật toán ưu nhược
 
-TODO: Tổng quan về lựa chọn queue
+## Base62 encode:
+[Base62 algo](/docs/base62.md)
 
+## Assume
+1. Deploy to cloud AWS
+2. Client is other systems
+3. Design for scale in the future
+4. Shortened URLs cannot be deleted or updated
+5. Domain can change
+6. No authenticate/authorization for simple.
+7. Skip the analysis for simple
+8. Some protection in the infra side (Rate limit by IP, DDOS,...)
+9. URL is keep even the origin URL die
+10. No expiration time for shortened URLs 
+11. Skip Monitoring and logging for simple
 
-TODO: Provide detailed instructions on how to run your assignment in a separate markdown file.
+## Flow Diagram
+![Diagram](/docs/drawing/shorten_url.png)
 
+## Security
+1. Password/Secret save in secret manager AWS.
 
-TODO: Provide tests for both endpoints (and any other tests you may want to write).
+## Improvements
+1. Webhook add HMAC sign.
+2. Add more notify type (FCM, websocket,...), and handle it in background
+3. Deploy a version to AWS
+4. Swap redis stream -> Kafka, Postgres -> ScyllaDB
+5. Add application and infrastructure monitoring (e.g. Prometheus + Grafana, OpenTelemetry)
+6. Implement per-user (or per-IP) rate limiting on API endpoints for abuse prevention
+7. Add input validation for URL schemes and block private/internal IPs to mitigate SSRF risks
+8. Support custom alias/vanity URLs and allow users to manage their links (requires auth)
+9. Add OAuth2/JWT authentication and RBAC for user-level permissions
+10. Improve tests: add integration tests using Docker Compose + Go testing for end-to-end coverage
+11. API usage analytics (counts, geolocation, traffic statistics), possibly using ClickHouse
+12. Add paginated listing and search for created links, both via API and optional admin dashboard
+13. Automatic HTTPS (Let’s Encrypt support with certbot/cert-manager in production)
+14. CLI tool or admin panel for operational tasks (purge, re-encode, debug webhooks, etc)
+15. Seamless blue/green or canary deployment support in CI/CD (Argo Rollouts, GitHub Actions)
 
-TODO: You need to think through potential attack vectors on the application, and document them in the README.
-
-TODO: Document explain how to scale(Add infra part), how solve collision problem, how solve concurrency problem
-
-TODO: Golang best practices explain

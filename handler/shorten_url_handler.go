@@ -30,15 +30,15 @@ func NewShortenURLHandler(
 }
 
 // SubmitEncode godoc
-// @Summary      Submit URL for encoding
-// @Description  Submit a long URL to be shortened. The encoding will be processed asynchronously.
+// @Summary      Submit URL for encoding, the URL is push to queue, and processing background. Client use callback_url if want to get webhook notify. Or polling /api/v1/urls/long to get res after processing.
+// @Description  callback_url webhook notify after process ok. long_url is the url want to encode.
 // @Tags         url
 // @Accept       json
 // @Produce      json
 // @Param        request  body      dto.SubmitShortenURLRequest  true  "URL encoding request"
 // @Success      200      {object}  dto.APIResponse
-// @Failure      400      {object}  dto.APIResponse
-// @Failure      500      {object}  dto.APIResponse
+// @Failure      400      {object}  dto.ErrorResponse
+// @Failure      500      {object}  dto.ErrorResponse
 // @Router       /api/v1/encode [post]
 func (h *ShortenURLHandler) SubmitEncode(c *gin.Context) {
 	var req dto.SubmitShortenURLRequest
@@ -69,8 +69,8 @@ func (h *ShortenURLHandler) SubmitEncode(c *gin.Context) {
 // @Produce      json
 // @Param        shorten_url  query     string  true  "Shortened URL"
 // @Success      200          {object}  dto.APIResponse{data=dto.GetDecodeURLResponse}
-// @Failure      400          {object}  dto.APIResponse
-// @Failure      500          {object}  dto.APIResponse
+// @Failure      400      {object}  dto.ErrorResponse
+// @Failure      500      {object}  dto.ErrorResponse
 // @Router       /api/v1/decode [get]
 func (h *ShortenURLHandler) GetDecode(c *gin.Context) {
 	var req dto.GetDecodeURLRequest
@@ -97,8 +97,8 @@ func (h *ShortenURLHandler) GetDecode(c *gin.Context) {
 // @Produce      json
 // @Param        long_url  query     string  true  "Original long URL"
 // @Success      200       {object}  dto.APIResponse{data=dto.GetDecodeURLResponse}
-// @Failure      400       {object}  dto.APIResponse
-// @Failure      500       {object}  dto.APIResponse
+// @Failure      400      {object}  dto.ErrorResponse
+// @Failure      500      {object}  dto.ErrorResponse
 // @Router       /api/v1/urls/long [get]
 func (h *ShortenURLHandler) GetURLEncodeByLongURL(c *gin.Context) {
 	var req dto.GetEncodeURLRequestByLongURL
@@ -123,8 +123,8 @@ func (h *ShortenURLHandler) GetURLEncodeByLongURL(c *gin.Context) {
 // @Produce      json
 // @Param        code  path      string  true  "Shortened URL code"
 // @Success      301   {string}  string  "Redirect to long URL"
-// @Failure      400   {object}  dto.APIResponse
-// @Failure      500   {object}  dto.APIResponse
+// @Failure      400      {object}  dto.ErrorResponse
+// @Failure      500      {object}  dto.ErrorResponse
 // @Router       /{code} [get]
 func (h *ShortenURLHandler) RedirectLongURL(c *gin.Context) {
 	const maxCodeLength = 10
