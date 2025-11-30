@@ -173,3 +173,54 @@ func TestHandleShortenURL(t *testing.T) {
 		})
 	}
 }
+
+func TestGetByLongURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		mockRepo *mockRepo
+		longURL  string
+		want     *model.ShortenURL
+		wantErr  bool
+	}{
+		{
+			name: "found",
+			mockRepo: &mockRepo{
+				byLongURL: &model.ShortenURL{
+					LongURL: "https://abc.com",
+					Code:    "shortabc",
+				},
+			},
+			longURL: "https://abc.com",
+			want:    &model.ShortenURL{LongURL: "https://abc.com", Code: "shortabc"},
+			wantErr: false,
+		},
+		{
+			name: "not found (repo returns error)",
+			mockRepo: &mockRepo{
+				byLongURL: nil,
+				errByLong: errors.New("not found"),
+			},
+			longURL: "https://notfound.com",
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			service := service.NewURLService(makeConfig(), tt.mockRepo, &mockProducer{}, &mockCache{}, &mockEncoder{}, nil)
+			got, err := service.GetByLongURL(context.Background(), tt.longURL)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("error = %v, wantErr = %v", err, tt.wantErr)
+			}
+			if tt.want != nil && got != nil {
+				if got.LongURL != tt.want.LongURL || got.Code != tt.want.Code {
+					t.Errorf("got = %+v, want = %+v", got, tt.want)
+				}
+			}
+			if tt.want == nil && got != nil {
+				t.Errorf("expected nil but got %+v", got)
+			}
+		})
+	}
+}
