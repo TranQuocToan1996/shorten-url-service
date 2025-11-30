@@ -19,6 +19,7 @@ import (
 	"shorten/repo"
 	"shorten/service"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
@@ -64,6 +65,27 @@ func main() {
 	// Setup routes
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
+
+	// Configure CORS - flexible for dev and production
+	corsOrigins := cfg.CORSOrigins()
+	corsConfig := cors.Config{
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization", "Accept", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
+
+	// If origins contains "*", allow all origins (development mode)
+	if len(corsOrigins) == 1 && corsOrigins[0] == "*" {
+		corsConfig.AllowAllOrigins = true
+		log.Println("CORS: Allowing all origins (development mode)")
+	} else {
+		corsConfig.AllowOrigins = corsOrigins
+		log.Printf("CORS: Allowing origins: %v", corsOrigins)
+	}
+
+	r.Use(cors.New(corsConfig))
 
 	urlRepo := repo.NewURLRepository(database)
 	cache := redis_cache.NewRedisCache(redisClient)

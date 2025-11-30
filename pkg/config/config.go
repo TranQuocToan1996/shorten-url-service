@@ -4,44 +4,49 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func LoadConfig() *Config {
 	return &Config{
-		SERVER_PORT:      getEnvOrDefault("SERVER_PORT", ":8080"),
-		DB_USER:          getEnvOrDefault("DB_USER", "postgres"),
-		DB_PASSWORD:      getEnvOrDefault("DB_PASSWORD", "password"),
-		DB_HOST:          getEnvOrDefault("DB_HOST", "localhost"),
-		DB_PORT:          getEnvOrDefault("DB_PORT", "5432"),
-		DB_NAME:          getEnvOrDefault("DB_NAME", "shorten-url-services"),
-		DB_SSLMODE:       getEnvOrDefault("DB_SSLMODE", "disable"),
-		QUEUE_NAME:       getEnvOrDefault("QUEUE_NAME", "default-queue"),
-		HOST:             getEnvOrDefault("HOST", "localhost:8080"),
-		REDIRECT_HOST:    getEnvOrDefault("REDIRECT_HOST", "localhost:8080"),
-		REDIS_HOST:       getEnvOrDefault("REDIS_HOST", "localhost"),
-		REDIS_PORT:       getEnvOrDefault("REDIS_PORT", "6379"),
-		REDIS_PASSWORD:   getEnvOrDefault("REDIS_PASSWORD", ""),
-		SECRET_KEY:       getEnvOrDefault("SECRET_KEY", "secret"),
-		SHORT_URL_LENGTH: getEnvOrDefault("SHORT_URL_LENGTH", "8"),
+		SERVER_PORT:        getEnvOrDefault("SERVER_PORT", ":8080"),
+		DB_USER:            getEnvOrDefault("DB_USER", "postgres"),
+		DB_PASSWORD:        getEnvOrDefault("DB_PASSWORD", "password"),
+		DB_HOST:            getEnvOrDefault("DB_HOST", "localhost"),
+		DB_PORT:            getEnvOrDefault("DB_PORT", "5432"),
+		DB_NAME:            getEnvOrDefault("DB_NAME", "shorten-url-services"),
+		DB_SSLMODE:         getEnvOrDefault("DB_SSLMODE", "disable"),
+		QUEUE_NAME:         getEnvOrDefault("QUEUE_NAME", "default-queue"),
+		HOST:               getEnvOrDefault("HOST", "localhost:8080"),
+		REDIRECT_HOST:      getEnvOrDefault("REDIRECT_HOST", "localhost:8080"),
+		REDIS_HOST:         getEnvOrDefault("REDIS_HOST", "localhost"),
+		REDIS_PORT:         getEnvOrDefault("REDIS_PORT", "6379"),
+		REDIS_PASSWORD:     getEnvOrDefault("REDIS_PASSWORD", ""),
+		SECRET_KEY:         getEnvOrDefault("SECRET_KEY", "secret"),
+		SHORT_URL_LENGTH:   getEnvOrDefault("SHORT_URL_LENGTH", "8"),
+		CORS_ALLOW_ORIGINS: getEnvOrDefault("CORS_ALLOW_ORIGINS", ""), // Empty = allow all in dev
+		ENVIRONMENT:        getEnvOrDefault("ENVIRONMENT", "development"),
 	}
 }
 
 type Config struct {
-	SERVER_PORT      string `mapstructure:"SERVER_PORT"`
-	DB_USER          string `mapstructure:"DB_USER"`
-	DB_PASSWORD      string `mapstructure:"DB_PASSWORD"`
-	DB_HOST          string `mapstructure:"DB_HOST"`
-	DB_PORT          string `mapstructure:"DB_PORT"`
-	DB_NAME          string `mapstructure:"DB_NAME"`
-	DB_SSLMODE       string `mapstructure:"DB_SSLMODE"`
-	QUEUE_NAME       string `mapstructure:"QUEUE_NAME"`
-	HOST             string `mapstructure:"HOST"`
-	REDIRECT_HOST    string `mapstructure:"REDIRECT_HOST"`
-	REDIS_HOST       string `mapstructure:"REDIS_HOST"`
-	REDIS_PORT       string `mapstructure:"REDIS_PORT"`
-	REDIS_PASSWORD   string `mapstructure:"REDIS_PASSWORD"`
-	SECRET_KEY       string `mapstructure:"SECRET_KEY"`
-	SHORT_URL_LENGTH string `mapstructure:"SHORT_URL_LENGTH"`
+	SERVER_PORT        string `mapstructure:"SERVER_PORT"`
+	DB_USER            string `mapstructure:"DB_USER"`
+	DB_PASSWORD        string `mapstructure:"DB_PASSWORD"`
+	DB_HOST            string `mapstructure:"DB_HOST"`
+	DB_PORT            string `mapstructure:"DB_PORT"`
+	DB_NAME            string `mapstructure:"DB_NAME"`
+	DB_SSLMODE         string `mapstructure:"DB_SSLMODE"`
+	QUEUE_NAME         string `mapstructure:"QUEUE_NAME"`
+	HOST               string `mapstructure:"HOST"`
+	REDIRECT_HOST      string `mapstructure:"REDIRECT_HOST"`
+	REDIS_HOST         string `mapstructure:"REDIS_HOST"`
+	REDIS_PORT         string `mapstructure:"REDIS_PORT"`
+	REDIS_PASSWORD     string `mapstructure:"REDIS_PASSWORD"`
+	SECRET_KEY         string `mapstructure:"SECRET_KEY"`
+	SHORT_URL_LENGTH   string `mapstructure:"SHORT_URL_LENGTH"`
+	CORS_ALLOW_ORIGINS string `mapstructure:"CORS_ALLOW_ORIGINS"`
+	ENVIRONMENT        string `mapstructure:"ENVIRONMENT"`
 }
 
 func (c *Config) DSN() string {
@@ -52,6 +57,27 @@ func (c *Config) DSN() string {
 
 func (c *Config) RedisAddr() string {
 	return fmt.Sprintf("%s:%s", c.REDIS_HOST, c.REDIS_PORT)
+}
+
+// CORSOrigins returns the list of allowed CORS origins
+// If CORS_ALLOW_ORIGINS is empty or ENVIRONMENT is "development", returns nil (allow all)
+// Otherwise, splits the comma-separated list of origins
+func (c *Config) CORSOrigins() []string {
+	// In development or if not specified, allow all origins
+	if c.ENVIRONMENT == "development" || c.CORS_ALLOW_ORIGINS == "" {
+		return []string{"*"} // Allow all origins
+	}
+
+	// In production, parse comma-separated origins
+	origins := strings.Split(c.CORS_ALLOW_ORIGINS, ",")
+	result := make([]string, 0, len(origins))
+	for _, origin := range origins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 // Validate validates the configuration and returns an error if required fields are missing or invalid

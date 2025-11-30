@@ -76,6 +76,9 @@ services:
       - QUEUE_NAME=shorten-url-queue
       - HOST=api:8080
       - REDIRECT_HOST=http://localhost:8080/api/v1/
+      - ENVIRONMENT=development
+      # CORS_ALLOW_ORIGINS is optional - if empty, allows all origins (dev mode)
+      # For production: CORS_ALLOW_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
     ports:
       - "8080:8080"
     restart: unless-stopped
