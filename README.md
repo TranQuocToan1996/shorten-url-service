@@ -12,7 +12,7 @@
 ## How to test
 1. Default setting for Backend API: "http://localhost:8080"
 2. Default setting for Frontend: "http://localhost:3000"
-
+3. For API doc: http://localhost:3000/swagger
 
 
 ## Base62 encode:
