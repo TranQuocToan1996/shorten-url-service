@@ -38,6 +38,7 @@ func (w *httpWebhookClient) Notify(ctx context.Context, callbackURL string, payl
 	resp, err := w.client.
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
+		SetBody(payload).
 		Post(callbackURL)
 	if err != nil {
 		log.Printf("httpWebhookClient, callbackURL [%v], payload [%v],err [%v]", callbackURL, payload, err)
