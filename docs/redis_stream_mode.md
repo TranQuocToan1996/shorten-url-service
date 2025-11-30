@@ -247,22 +247,3 @@ for _, str := range res {
 	}
 }
 ```
-
-Recommendation: Log errors and continue processing instead of stopping.
-
-### Issue 3: No retry mechanism
-Problem: Failed messages are redelivered after 30s, but there's no exponential backoff or max retries.
-
-Recommendation: Add retry logic with exponential backoff and max retry limits.
-
----
-
-## Recommended improvements
-
-1. Make handlers idempotent (check if URL already processed)
-2. Continue processing on errors instead of stopping the consumer
-3. Add retry logic with exponential backoff
-4. Consider dead-letter queue for messages that fail repeatedly
-5. Add monitoring for pending messages and consumer lag
-
-Current implementation is safe for concurrent producers and consumers, with at-least-once delivery guarantees.

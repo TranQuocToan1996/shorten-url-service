@@ -100,7 +100,7 @@ func main() {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Health check
-	r.GET("/health", healthCheck)
+	r.GET("/health", handler.HealthCheck)
 
 	// API routes
 	v1 := r.Group("/api/v1")
@@ -139,15 +139,4 @@ func main() {
 	}
 
 	log.Println("API server stopped")
-}
-
-// healthCheck godoc
-// @Summary      Health check
-// @Description  Check if the service is running
-// @Tags         health
-// @Produce      json
-// @Success      200  {object}  map[string]string
-// @Router       /health [get]
-func healthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
